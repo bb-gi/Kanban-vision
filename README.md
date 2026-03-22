@@ -1,73 +1,51 @@
-# React + TypeScript + Vite
+# Kanban Vision
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Application web de tableau Kanban permettant d'organiser et visualiser des fichiers Markdown importés depuis votre système de fichiers.
 
-Currently, two official plugins are available:
+## Fonctionnalités
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Import de projets** — Importez des dossiers entiers depuis votre machine. L'application lit récursivement les fichiers `.md` et reconstruit l'arborescence.
+- **Tableaux Kanban** — Créez plusieurs tableaux indépendants. Ajoutez n'importe quel dossier comme colonne, y compris des dossiers provenant de projets différents.
+- **Drag & drop** — Réorganisez les colonnes, déplacez les fichiers entre colonnes, réordonnez les cartes, ou glissez des fichiers `.md` depuis votre OS directement dans une colonne.
+- **Visualisation Markdown** — Cliquez sur une carte pour afficher le contenu Markdown en plein écran avec rendu stylisé.
+- **Personnalisation** — Renommez projets, dossiers et tableaux. Attribuez des couleurs aux dossiers et projets.
+- **Persistance** — Toutes les données sont sauvegardées dans le `localStorage` du navigateur.
 
-## React Compiler
+## Stack technique
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **React 19** + **TypeScript** + **Vite**
+- **Tailwind CSS 4** (thème sombre)
+- **@dnd-kit** (drag & drop)
+- **react-markdown** + **@tailwindcss/typography** (rendu Markdown)
+- **lucide-react** (icônes)
+- État global via **React Context** + `useReducer`, persisté dans `localStorage`
 
-## Expanding the ESLint configuration
+## Démarrage
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+L'application sera accessible sur `http://localhost:5173`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Scripts
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+| Commande | Description |
+|---|---|
+| `npm run dev` | Serveur de développement avec HMR |
+| `npm run build` | Build de production (TypeScript + Vite) |
+| `npm run preview` | Prévisualisation du build |
+| `npm run lint` | Linting ESLint |
+
+## Utilisation
+
+1. Cliquez sur **Nouveau projet** et sélectionnez un dossier contenant des fichiers Markdown.
+2. Créez un tableau via le **+** dans la section Tableaux.
+3. Cochez les dossiers dans la barre latérale pour les ajouter comme colonnes au tableau actif.
+4. Glissez-déposez les cartes pour organiser vos fichiers.
+5. Cliquez sur une carte pour lire le contenu Markdown.
+
+## Compatibilité navigateur
+
+L'import de dossiers utilise l'API [File System Access](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API) (Chrome 86+, Edge 86+).
