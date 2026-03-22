@@ -1,8 +1,9 @@
 import { FolderSearch, RefreshCw, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { BoardList } from './BoardList';
-import { FolderTree } from './FolderTree';
-import { pickAndReadDirectory, refreshFolderContents } from '../../lib/fileReader';
+import { ProjectList } from './ProjectList';
+import { pickAndReadDirectory } from '../../lib/fileReader';
+import { getNextColor } from '../../lib/folderUtils';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -13,12 +14,20 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const { state, dispatch } = useApp();
 
   const activeBoard = state.boards.find((b) => b.id === state.activeBoardId) ?? null;
+  const activeProject = state.projects.find((p) => p.id === state.activeProjectId) ?? null;
 
   const handleScanDirectory = async () => {
     try {
-      const folders = await pickAndReadDirectory();
-      if (folders.length > 0) {
-        dispatch({ type: 'IMPORT_FOLDERS', payload: folders });
+      const result = await pickAndReadDirectory();
+      if (result.folders.length > 0) {
+        dispatch({
+          type: 'IMPORT_PROJECT',
+          payload: {
+            name: result.rootName,
+            folders: result.folders,
+            color: getNextColor(),
+          },
+        });
       }
     } catch (err) {
       console.error('Failed to read directory:', err);
@@ -26,9 +35,16 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   };
 
   const handleRefresh = async () => {
+    if (!activeProject) return;
     try {
-      const refreshed = await refreshFolderContents(state.folders);
-      dispatch({ type: 'REFRESH_FOLDERS', payload: refreshed });
+      const result = await pickAndReadDirectory();
+      if (result.folders.length > 0) {
+        const merged = mergeRefreshedFolders(activeProject.folders, result.folders);
+        dispatch({
+          type: 'REFRESH_PROJECT',
+          payload: { projectId: activeProject.id, folders: merged },
+        });
+      }
     } catch (err) {
       console.error('Failed to refresh:', err);
     }
@@ -74,28 +90,60 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           className="flex items-center gap-2 flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-3 py-1.5 rounded transition-colors"
         >
           <FolderSearch size={14} />
-          Scanner
+          Nouveau projet
         </button>
-        {state.folders.length > 0 && (
+        {activeProject && (
           <button
             onClick={handleRefresh}
             className="flex items-center gap-1 bg-gray-700 hover:bg-gray-600 text-white text-sm px-3 py-1.5 rounded transition-colors"
-            title="Rafraîchir le contenu des dossiers"
+            title="Rafraîchir le projet actif"
           >
             <RefreshCw size={14} />
           </button>
         )}
       </div>
 
-      {/* Folder tree */}
+      {/* Projects & folder tree */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-3 py-2">
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-            Explorateur
+            Projets
           </h3>
         </div>
-        <FolderTree folders={state.folders} activeBoard={activeBoard} />
+        {state.projects.length === 0 ? (
+          <div className="px-3 py-4 text-center text-gray-500 text-sm">
+            <p>Aucun projet</p>
+            <p className="text-xs text-gray-600 mt-1">
+              Scannez un dossier pour créer un projet
+            </p>
+          </div>
+        ) : (
+          <ProjectList
+            projects={state.projects}
+            activeProjectId={state.activeProjectId}
+            activeBoard={activeBoard}
+          />
+        )}
       </div>
     </div>
   );
+}
+
+// Merge refreshed folders with existing ones (keep IDs, displayNames, colors)
+import type { Folder } from '../../types';
+
+function mergeRefreshedFolders(existing: Folder[], fresh: Folder[]): Folder[] {
+  return fresh.map((freshFolder) => {
+    const match = existing.find((e) => e.originalName === freshFolder.originalName);
+    if (match) {
+      return {
+        ...freshFolder,
+        id: match.id,
+        displayName: match.displayName,
+        color: match.color,
+        subfolders: mergeRefreshedFolders(match.subfolders, freshFolder.subfolders),
+      };
+    }
+    return freshFolder;
+  });
 }

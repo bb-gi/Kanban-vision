@@ -14,7 +14,15 @@ import { useApp } from '../../context/AppContext';
 import { findFolderById } from '../../lib/folderUtils';
 import { Column } from './Column';
 import { MarkdownViewer } from '../MarkdownViewer';
-import type { FileItem } from '../../types';
+import type { FileItem, Folder } from '../../types';
+
+function findFolderAcrossProjects(state: { projects: { folders: Folder[] }[] }, id: string): Folder | null {
+  for (const project of state.projects) {
+    const found = findFolderById(project.folders, id);
+    if (found) return found;
+  }
+  return null;
+}
 
 export function Dashboard() {
   const { state, dispatch } = useApp();
@@ -29,7 +37,7 @@ export function Dashboard() {
 
   const columns = activeBoard
     ? activeBoard.columnLayout
-        .map((id) => findFolderById(state.folders, id))
+        .map((id) => findFolderAcrossProjects(state, id))
         .filter((f): f is NonNullable<typeof f> => f !== null)
     : [];
 
@@ -100,7 +108,7 @@ export function Dashboard() {
       // File reorder within same column
       if (activeData?.type === 'file' && overData?.type === 'file') {
         if (activeData.folderId === overData.folderId) {
-          const folder = findFolderById(state.folders, activeData.folderId);
+          const folder = findFolderAcrossProjects(state, activeData.folderId);
           if (folder) {
             const oldIndex = folder.files.findIndex((f) => f.id === activeData.fileId);
             const newIndex = folder.files.findIndex((f) => f.id === overData.fileId);
@@ -121,7 +129,7 @@ export function Dashboard() {
         }
       }
     },
-    [activeBoard, state.folders, dispatch]
+    [activeBoard, state.projects, dispatch]
   );
 
   // No board selected

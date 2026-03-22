@@ -1,6 +1,6 @@
 import { useReducer, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import type { AppState, AppAction } from '../types';
+import type { AppState, AppAction, Folder } from '../types';
 import { DEFAULT_STATE } from '../types';
 import { useLocalStorage } from './useLocalStorage';
 import {
@@ -11,23 +11,111 @@ import {
   collectAllFolderIds,
 } from '../lib/folderUtils';
 
+// Helper: apply a folder operation across all projects
+function mapAllFolders(
+  state: AppState,
+  fn: (folders: Folder[]) => Folder[]
+): AppState {
+  return {
+    ...state,
+    projects: state.projects.map((p) => ({
+      ...p,
+      folders: fn(p.folders),
+    })),
+  };
+}
+
+// Helper: find a folder across all projects
+function findInAllProjects(state: AppState, id: string): Folder | null {
+  for (const project of state.projects) {
+    const found = findInFolders(project.folders, id);
+    if (found) return found;
+  }
+  return null;
+}
+
+function findInFolders(folders: Folder[], id: string): Folder | null {
+  for (const f of folders) {
+    if (f.id === id) return f;
+    const found = findInFolders(f.subfolders, id);
+    if (found) return found;
+  }
+  return null;
+}
+
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
-    case 'IMPORT_FOLDERS':
+    // === Project actions ===
+    case 'IMPORT_PROJECT': {
+      const newProject = {
+        id: uuidv4(),
+        name: action.payload.name,
+        color: action.payload.color,
+        folders: action.payload.folders,
+      };
       return {
         ...state,
-        folders: [...state.folders, ...action.payload],
+        projects: [...state.projects, newProject],
+        activeProjectId: newProject.id,
       };
+    }
 
-    case 'REFRESH_FOLDERS':
+    case 'DELETE_PROJECT': {
+      // Collect all folder IDs from this project to clean boards
+      const project = state.projects.find((p) => p.id === action.payload.projectId);
+      const folderIds = project ? new Set(collectAllFolderIds(project.folders)) : new Set<string>();
+      const remaining = state.projects.filter((p) => p.id !== action.payload.projectId);
       return {
         ...state,
-        folders: action.payload,
+        projects: remaining,
+        activeProjectId:
+          state.activeProjectId === action.payload.projectId
+            ? remaining[0]?.id ?? null
+            : state.activeProjectId,
+        boards: state.boards.map((board) => ({
+          ...board,
+          columnLayout: board.columnLayout.filter((id) => !folderIds.has(id)),
+        })),
+      };
+    }
+
+    case 'RENAME_PROJECT':
+      return {
+        ...state,
+        projects: state.projects.map((p) =>
+          p.id === action.payload.projectId
+            ? { ...p, name: action.payload.name }
+            : p
+        ),
       };
 
+    case 'SET_PROJECT_COLOR':
+      return {
+        ...state,
+        projects: state.projects.map((p) =>
+          p.id === action.payload.projectId
+            ? { ...p, color: action.payload.color }
+            : p
+        ),
+      };
+
+    case 'SET_ACTIVE_PROJECT':
+      return { ...state, activeProjectId: action.payload.projectId };
+
+    case 'REFRESH_PROJECT':
+      return {
+        ...state,
+        projects: state.projects.map((p) =>
+          p.id === action.payload.projectId
+            ? { ...p, folders: action.payload.folders }
+            : p
+        ),
+      };
+
+    // === Folder actions (operate across all projects) ===
     case 'ADD_FOLDER': {
-      const { name, parentId } = action.payload;
-      const newFolder = {
+      const { projectId, name, parentId } = action.payload;
+      const newFolder: Folder = {
         id: uuidv4(),
         originalName: name,
         displayName: name,
@@ -36,46 +124,51 @@ function appReducer(state: AppState, action: AppAction): AppState {
         subfolders: [],
       };
       if (parentId) {
-        return {
-          ...state,
-          folders: updateFolderById(state.folders, parentId, (f) => ({
+        return mapAllFolders(state, (folders) =>
+          updateFolderById(folders, parentId, (f) => ({
             ...f,
             subfolders: [...f.subfolders, newFolder],
-          })),
-        };
+          }))
+        );
       }
-      return { ...state, folders: [...state.folders, newFolder] };
+      return {
+        ...state,
+        projects: state.projects.map((p) =>
+          p.id === projectId
+            ? { ...p, folders: [...p.folders, newFolder] }
+            : p
+        ),
+      };
     }
 
     case 'RENAME_FOLDER':
-      return {
-        ...state,
-        folders: updateFolderById(state.folders, action.payload.id, (f) => ({
+      return mapAllFolders(state, (folders) =>
+        updateFolderById(folders, action.payload.id, (f) => ({
           ...f,
           displayName: action.payload.displayName,
-        })),
-      };
+        }))
+      );
 
     case 'SET_COLOR':
-      return {
-        ...state,
-        folders: updateFolderById(state.folders, action.payload.id, (f) => ({
+      return mapAllFolders(state, (folders) =>
+        updateFolderById(folders, action.payload.id, (f) => ({
           ...f,
           color: action.payload.color,
-        })),
-      };
+        }))
+      );
 
     case 'DELETE_FOLDER': {
       const deletedIds = new Set([action.payload.id]);
-      // Collect all child folder IDs too
-      const folder = findInFolders(state.folders, action.payload.id);
+      const folder = findInAllProjects(state, action.payload.id);
       if (folder) {
         collectAllFolderIds(folder.subfolders).forEach((id) => deletedIds.add(id));
       }
+      const updated = mapAllFolders(state, (folders) =>
+        removeFolderById(folders, action.payload.id)
+      );
       return {
-        ...state,
-        folders: removeFolderById(state.folders, action.payload.id),
-        boards: state.boards.map((board) => ({
+        ...updated,
+        boards: updated.boards.map((board) => ({
           ...board,
           columnLayout: board.columnLayout.filter((id) => !deletedIds.has(id)),
         })),
@@ -83,27 +176,26 @@ function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case 'MOVE_FILE':
-      return {
-        ...state,
-        folders: moveFile(
-          state.folders,
+      return mapAllFolders(state, (folders) =>
+        moveFile(
+          folders,
           action.payload.fileId,
           action.payload.fromFolderId,
           action.payload.toFolderId,
           action.payload.index
-        ),
-      };
+        )
+      );
 
     case 'REORDER_FILES':
-      return {
-        ...state,
-        folders: reorderFiles(
-          state.folders,
+      return mapAllFolders(state, (folders) =>
+        reorderFiles(
+          folders,
           action.payload.folderId,
           action.payload.fileIds
-        ),
-      };
+        )
+      );
 
+    // === Board actions ===
     case 'CREATE_BOARD': {
       const newBoard = {
         id: uuidv4(),
@@ -170,26 +262,16 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
 
     case 'ADD_FILES_TO_FOLDER':
-      return {
-        ...state,
-        folders: updateFolderById(state.folders, action.payload.folderId, (f) => ({
+      return mapAllFolders(state, (folders) =>
+        updateFolderById(folders, action.payload.folderId, (f) => ({
           ...f,
           files: [...f.files, ...action.payload.files],
-        })),
-      };
+        }))
+      );
 
     default:
       return state;
   }
-}
-
-function findInFolders(folders: AppState['folders'], id: string): AppState['folders'][0] | null {
-  for (const f of folders) {
-    if (f.id === id) return f;
-    const found = findInFolders(f.subfolders, id);
-    if (found) return found;
-  }
-  return null;
 }
 
 export function useAppState() {
@@ -199,7 +281,6 @@ export function useAppState() {
   );
   const [state, dispatch] = useReducer(appReducer, persisted);
 
-  // Sync reducer state back to localStorage
   useEffect(() => {
     setPersisted(state);
   }, [state, setPersisted]);

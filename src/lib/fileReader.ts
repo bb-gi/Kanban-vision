@@ -2,6 +2,11 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Folder, FileItem } from '../types';
 import { getNextColor } from './folderUtils';
 
+export interface DirectoryReadResult {
+  rootName: string;
+  folders: Folder[];
+}
+
 async function readDirectoryHandle(
   handle: FileSystemDirectoryHandle
 ): Promise<Folder> {
@@ -31,55 +36,29 @@ async function readDirectoryHandle(
     }
   }
 
-  // Sort files and subfolders alphabetically
   folder.files.sort((a, b) => a.title.localeCompare(b.title));
   folder.subfolders.sort((a, b) => a.originalName.localeCompare(b.originalName));
 
   return folder;
 }
 
-export async function pickAndReadDirectory(): Promise<Folder[]> {
+export async function pickAndReadDirectory(): Promise<DirectoryReadResult> {
   try {
     const handle = await (window as any).showDirectoryPicker();
     const rootFolder = await readDirectoryHandle(handle);
-    // Return the children of the selected root (the projects inside)
-    // If root has subfolders, return them; otherwise return the root itself
+    const rootName = handle.name;
+
+    // Return the children of the selected root as the project's folders
     if (rootFolder.subfolders.length > 0) {
-      return rootFolder.subfolders;
+      return { rootName, folders: rootFolder.subfolders };
     }
-    return [rootFolder];
+    return { rootName, folders: [rootFolder] };
   } catch (err) {
     if ((err as Error).name === 'AbortError') {
-      return []; // User cancelled
+      return { rootName: '', folders: [] };
     }
     throw err;
   }
-}
-
-export async function refreshFolderContents(
-  existingFolders: Folder[]
-): Promise<Folder[]> {
-  // Re-pick and re-read directory, then merge metadata
-  const freshFolders = await pickAndReadDirectory();
-  return mergeFolders(existingFolders, freshFolders);
-}
-
-function mergeFolders(existing: Folder[], fresh: Folder[]): Folder[] {
-  return fresh.map((freshFolder) => {
-    const match = existing.find(
-      (e) => e.originalName === freshFolder.originalName
-    );
-    if (match) {
-      return {
-        ...freshFolder,
-        id: match.id,
-        displayName: match.displayName,
-        color: match.color,
-        subfolders: mergeFolders(match.subfolders, freshFolder.subfolders),
-      };
-    }
-    return freshFolder;
-  });
 }
 
 // For drag-and-drop from OS file explorer
