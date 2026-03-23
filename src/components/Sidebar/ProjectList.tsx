@@ -4,6 +4,7 @@ import type { Project, Board } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { ColorPicker } from './ColorPicker';
 import { FolderTree } from './FolderTree';
+import { removeHandle } from '../../lib/handleStore';
 
 interface ProjectListProps {
   projects: Project[];
@@ -122,6 +123,7 @@ export function ProjectList({ projects, activeProjectId, activeBoard }: ProjectL
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      removeHandle(project.id).catch(() => {});
                       dispatch({ type: 'DELETE_PROJECT', payload: { projectId: project.id } });
                     }}
                     className="p-1 text-gray-400 hover:text-red-400"

@@ -1,9 +1,11 @@
 import { FolderSearch, RefreshCw, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 import { useApp } from '../../context/AppContext';
 import { BoardList } from './BoardList';
 import { ProjectList } from './ProjectList';
-import { pickAndReadDirectory } from '../../lib/fileReader';
+import { pickAndReadDirectory, readDirectoryFromHandle } from '../../lib/fileReader';
 import { getNextColor } from '../../lib/folderUtils';
+import { storeHandle, getHandleInfo, ensurePermission } from '../../lib/handleStore';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -20,12 +22,16 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     try {
       const result = await pickAndReadDirectory();
       if (result.folders.length > 0) {
+        const projectId = uuidv4();
+        await storeHandle(projectId, result.handle, result.isRootFlat);
         dispatch({
           type: 'IMPORT_PROJECT',
           payload: {
+            id: projectId,
             name: result.rootName,
             folders: result.folders,
             color: getNextColor(),
+            isRootFlat: result.isRootFlat,
           },
         });
       }
@@ -37,8 +43,20 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const handleRefresh = async () => {
     if (!activeProject) return;
     try {
+      const info = await getHandleInfo(activeProject.id);
+      if (info && (await ensurePermission(info.handle))) {
+        const folders = await readDirectoryFromHandle(info.handle);
+        const merged = mergeRefreshedFolders(activeProject.folders, folders);
+        dispatch({
+          type: 'REFRESH_PROJECT',
+          payload: { projectId: activeProject.id, folders: merged },
+        });
+        return;
+      }
+      // Fallback: re-ask user
       const result = await pickAndReadDirectory();
       if (result.folders.length > 0) {
+        await storeHandle(activeProject.id, result.handle, result.isRootFlat);
         const merged = mergeRefreshedFolders(activeProject.folders, result.folders);
         dispatch({
           type: 'REFRESH_PROJECT',
@@ -49,6 +67,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       console.error('Failed to refresh:', err);
     }
   };
+
 
   if (!isOpen) {
     return (

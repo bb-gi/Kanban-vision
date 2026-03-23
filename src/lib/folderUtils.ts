@@ -1,4 +1,4 @@
-import type { Folder, FileItem } from '../types';
+import type { Folder, FileItem, Project } from '../types';
 
 export function findFolderById(folders: Folder[], id: string): Folder | null {
   for (const folder of folders) {
@@ -113,4 +113,29 @@ export function collectAllFolderIds(folders: Folder[]): string[] {
     ids.push(...collectAllFolderIds(folder.subfolders));
   }
   return ids;
+}
+
+export function getFolderPath(
+  folders: Folder[],
+  targetId: string,
+  currentPath: string[] = []
+): string[] | null {
+  for (const folder of folders) {
+    const path = [...currentPath, folder.originalName];
+    if (folder.id === targetId) return path;
+    const found = getFolderPath(folder.subfolders, targetId, path);
+    if (found) return found;
+  }
+  return null;
+}
+
+export function findProjectForFolder(
+  projects: Project[],
+  folderId: string
+): { project: Project; path: string[] } | null {
+  for (const project of projects) {
+    const path = getFolderPath(project.folders, folderId);
+    if (path) return { project, path };
+  }
+  return null;
 }

@@ -5,6 +5,8 @@ import { getNextColor } from './folderUtils';
 export interface DirectoryReadResult {
   rootName: string;
   folders: Folder[];
+  handle: FileSystemDirectoryHandle;
+  isRootFlat: boolean;
 }
 
 async function readDirectoryHandle(
@@ -42,20 +44,31 @@ async function readDirectoryHandle(
   return folder;
 }
 
+// Read a directory from a stored handle without prompting the user
+export async function readDirectoryFromHandle(
+  handle: FileSystemDirectoryHandle
+): Promise<Folder[]> {
+  const rootFolder = await readDirectoryHandle(handle);
+  if (rootFolder.subfolders.length > 0) {
+    return rootFolder.subfolders;
+  }
+  return [rootFolder];
+}
+
 export async function pickAndReadDirectory(): Promise<DirectoryReadResult> {
   try {
-    const handle = await (window as any).showDirectoryPicker();
+    const handle: FileSystemDirectoryHandle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
     const rootFolder = await readDirectoryHandle(handle);
     const rootName = handle.name;
+    const isRootFlat = rootFolder.subfolders.length === 0;
 
-    // Return the children of the selected root as the project's folders
-    if (rootFolder.subfolders.length > 0) {
-      return { rootName, folders: rootFolder.subfolders };
+    if (!isRootFlat) {
+      return { rootName, folders: rootFolder.subfolders, handle, isRootFlat };
     }
-    return { rootName, folders: [rootFolder] };
+    return { rootName, folders: [rootFolder], handle, isRootFlat };
   } catch (err) {
     if ((err as Error).name === 'AbortError') {
-      return { rootName: '', folders: [] };
+      return { rootName: '', folders: [], handle: null as any, isRootFlat: false };
     }
     throw err;
   }

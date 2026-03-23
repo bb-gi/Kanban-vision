@@ -48,10 +48,11 @@ function appReducer(state: AppState, action: AppAction): AppState {
     // === Project actions ===
     case 'IMPORT_PROJECT': {
       const newProject = {
-        id: uuidv4(),
+        id: action.payload.id,
         name: action.payload.name,
         color: action.payload.color,
         folders: action.payload.folders,
+        isRootFlat: action.payload.isRootFlat,
       };
       return {
         ...state,

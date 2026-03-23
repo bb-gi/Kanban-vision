@@ -15,6 +15,9 @@ import { findFolderById } from '../../lib/folderUtils';
 import { Column } from './Column';
 import { MarkdownViewer } from '../MarkdownViewer';
 import { MarkdownEditor } from '../MarkdownEditor';
+import { findProjectForFolder } from '../../lib/folderUtils';
+import { getHandleInfo, ensurePermission } from '../../lib/handleStore';
+import { writeMdFile } from '../../lib/fileWriter';
 import type { FileItem, Folder } from '../../types';
 
 function findFolderAcrossProjects(state: { projects: { folders: Folder[] }[] }, id: string): Folder | null {
@@ -31,12 +34,22 @@ export function Dashboard() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [creatingInFolderId, setCreatingInFolderId] = useState<string | null>(null);
 
-  const handleSaveNewFile = useCallback((folderId: string, file: FileItem) => {
+  const handleSaveNewFile = useCallback(async (folderId: string, file: FileItem) => {
     dispatch({
       type: 'ADD_FILES_TO_FOLDER',
       payload: { folderId, files: [file] },
     });
-  }, [dispatch]);
+
+    // Write to disk if a handle is available
+    const result = findProjectForFolder(state.projects, folderId);
+    if (!result) return;
+    const info = await getHandleInfo(result.project.id);
+    if (!info || !(await ensurePermission(info.handle))) return;
+    const pathToWrite = result.project.isRootFlat ? result.path.slice(1) : result.path;
+    await writeMdFile(info.handle, pathToWrite, file.title, file.content).catch((err) => {
+      console.error('Failed to write file to disk:', err);
+    });
+  }, [dispatch, state.projects]);
 
   const activeBoard = state.boards.find((b) => b.id === state.activeBoardId);
 

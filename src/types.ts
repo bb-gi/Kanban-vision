@@ -18,6 +18,7 @@ export interface Project {
   name: string;
   color: string;
   folders: Folder[];
+  isRootFlat?: boolean;
 }
 
 export interface Board {
@@ -41,7 +42,7 @@ export const DEFAULT_STATE: AppState = {
 };
 
 export type AppAction =
-  | { type: 'IMPORT_PROJECT'; payload: { name: string; folders: Folder[]; color: string } }
+  | { type: 'IMPORT_PROJECT'; payload: { id: string; name: string; folders: Folder[]; color: string; isRootFlat: boolean } }
   | { type: 'DELETE_PROJECT'; payload: { projectId: string } }
   | { type: 'RENAME_PROJECT'; payload: { projectId: string; name: string } }
   | { type: 'SET_PROJECT_COLOR'; payload: { projectId: string; color: string } }
