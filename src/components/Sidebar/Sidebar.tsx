@@ -1,4 +1,5 @@
-import { FolderSearch, RefreshCw, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { useState } from 'react';
+import { FolderSearch, RefreshCw, PanelLeftClose, PanelLeft, Loader2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { BoardList } from './BoardList';
 import { ProjectList } from './ProjectList';
@@ -15,8 +16,11 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   const activeBoard = state.boards.find((b) => b.id === state.activeBoardId) ?? null;
   const activeProject = state.projects.find((p) => p.id === state.activeProjectId) ?? null;
+  const [isScanning, setIsScanning] = useState(false);
 
   const handleScanDirectory = async () => {
+    if (isScanning) return;
+    setIsScanning(true);
     try {
       const result = await pickAndReadDirectory();
       if (result.folders.length > 0) {
@@ -31,11 +35,14 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       }
     } catch (err) {
       console.error('Failed to read directory:', err);
+    } finally {
+      setIsScanning(false);
     }
   };
 
   const handleRefresh = async () => {
-    if (!activeProject) return;
+    if (!activeProject || isScanning) return;
+    setIsScanning(true);
     try {
       const result = await pickAndReadDirectory();
       if (result.folders.length > 0) {
@@ -47,6 +54,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       }
     } catch (err) {
       console.error('Failed to refresh:', err);
+    } finally {
+      setIsScanning(false);
     }
   };
 
@@ -87,18 +96,28 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       <div className="flex gap-2 px-3 py-3 border-b border-gray-700">
         <button
           onClick={handleScanDirectory}
-          className="flex items-center gap-2 flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-3 py-1.5 rounded transition-colors"
+          disabled={isScanning}
+          className="flex items-center gap-2 flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-3 py-1.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <FolderSearch size={14} />
-          Nouveau projet
+          {isScanning ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <FolderSearch size={14} />
+          )}
+          {isScanning ? 'Chargement…' : 'Nouveau projet'}
         </button>
         {activeProject && (
           <button
             onClick={handleRefresh}
-            className="flex items-center gap-1 bg-gray-700 hover:bg-gray-600 text-white text-sm px-3 py-1.5 rounded transition-colors"
+            disabled={isScanning}
+            className="flex items-center gap-1 bg-gray-700 hover:bg-gray-600 text-white text-sm px-3 py-1.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Rafraîchir le projet actif"
           >
-            <RefreshCw size={14} />
+            {isScanning ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <RefreshCw size={14} />
+            )}
           </button>
         )}
       </div>
