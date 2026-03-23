@@ -2,7 +2,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripHorizontal, Upload, Plus } from 'lucide-react';
+import { GripHorizontal, Upload, Plus, Loader2 } from 'lucide-react';
 import type { Folder, FileItem } from '../../types';
 import { FileCard } from './FileCard';
 import { useApp } from '../../context/AppContext';
@@ -19,6 +19,7 @@ interface ColumnProps {
 export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
   const { dispatch } = useApp();
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isDropLoading, setIsDropLoading] = useState(false);
 
   const {
     attributes,
@@ -64,12 +65,17 @@ export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
 
     // Only process OS file drops (not @dnd-kit internal)
     if (e.dataTransfer.files.length > 0) {
-      const files = await readDroppedFiles(e.dataTransfer);
-      if (files.length > 0) {
-        dispatch({
-          type: 'ADD_FILES_TO_FOLDER',
-          payload: { folderId: folder.id, files },
-        });
+      setIsDropLoading(true);
+      try {
+        const files = await readDroppedFiles(e.dataTransfer);
+        if (files.length > 0) {
+          dispatch({
+            type: 'ADD_FILES_TO_FOLDER',
+            payload: { folderId: folder.id, files },
+          });
+        }
+      } finally {
+        setIsDropLoading(false);
       }
     }
   };
@@ -132,7 +138,14 @@ export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
           ))}
         </SortableContext>
 
-        {folder.files.length === 0 && (
+        {isDropLoading && (
+          <div className="flex flex-col items-center justify-center py-4 text-indigo-400 text-xs">
+            <Loader2 size={16} className="animate-spin mb-1" />
+            <p>Importation…</p>
+          </div>
+        )}
+
+        {folder.files.length === 0 && !isDropLoading && (
           <div className="flex flex-col items-center justify-center py-4 text-gray-500 text-xs">
             <Upload size={16} className="mb-1" />
             <p>Glissez des fichiers .md ici</p>
