@@ -14,6 +14,7 @@ import { useApp } from '../../context/AppContext';
 import { findFolderById } from '../../lib/folderUtils';
 import { Column } from './Column';
 import { MarkdownViewer } from '../MarkdownViewer';
+import { MarkdownEditor } from '../MarkdownEditor';
 import type { FileItem, Folder } from '../../types';
 
 function findFolderAcrossProjects(state: { projects: { folders: Folder[] }[] }, id: string): Folder | null {
@@ -28,6 +29,14 @@ export function Dashboard() {
   const { state, dispatch } = useApp();
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [creatingInFolderId, setCreatingInFolderId] = useState<string | null>(null);
+
+  const handleSaveNewFile = useCallback((folderId: string, file: FileItem) => {
+    dispatch({
+      type: 'ADD_FILES_TO_FOLDER',
+      payload: { folderId, files: [file] },
+    });
+  }, [dispatch]);
 
   const activeBoard = state.boards.find((b) => b.id === state.activeBoardId);
 
@@ -181,6 +190,7 @@ export function Dashboard() {
                   key={folder.id}
                   folder={folder}
                   onFileClick={setSelectedFile}
+                  onCreateFile={setCreatingInFolderId}
                 />
               ))}
             </div>
@@ -200,6 +210,15 @@ export function Dashboard() {
         <MarkdownViewer
           file={selectedFile}
           onClose={() => setSelectedFile(null)}
+        />
+      )}
+
+      {/* Markdown editor modal */}
+      {creatingInFolderId && (
+        <MarkdownEditor
+          folderId={creatingInFolderId}
+          onClose={() => setCreatingInFolderId(null)}
+          onSave={handleSaveNewFile}
         />
       )}
     </div>
