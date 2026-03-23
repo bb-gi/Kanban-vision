@@ -2,7 +2,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripHorizontal, Upload } from 'lucide-react';
+import { GripHorizontal, Upload, Plus } from 'lucide-react';
 import type { Folder, FileItem } from '../../types';
 import { FileCard } from './FileCard';
 import { useApp } from '../../context/AppContext';
@@ -13,9 +13,10 @@ import type { DragEvent } from 'react';
 interface ColumnProps {
   folder: Folder;
   onFileClick: (file: FileItem) => void;
+  onCreateFile: (folderId: string) => void;
 }
 
-export function Column({ folder, onFileClick }: ColumnProps) {
+export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
   const { dispatch } = useApp();
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -101,6 +102,13 @@ export function Column({ folder, onFileClick }: ColumnProps) {
         <span className="text-xs text-gray-400 shrink-0">
           {folder.files.length}
         </span>
+        <button
+          onClick={() => onCreateFile(folder.id)}
+          className="shrink-0 text-gray-400 hover:text-white transition-colors p-0.5 rounded hover:bg-gray-600"
+          title="Nouveau fichier"
+        >
+          <Plus size={14} />
+        </button>
       </div>
 
       {/* File list */}
