@@ -3,6 +3,7 @@ export interface FileItem {
   title: string;
   content: string;
   gitlabIssueIid?: number;
+  tags?: string[];
 }
 
 export interface GitLabConfig {
@@ -78,5 +79,7 @@ export type AppAction =
   | { type: 'REMOVE_GITLAB_CONFIG'; payload: { projectId: string } }
   | { type: 'SET_FOLDER_GITLAB_LABEL'; payload: { folderId: string; label: string } }
   | { type: 'SYNC_GITLAB_ISSUES'; payload: { projectId: string; folderId: string; files: FileItem[] } }
+  | { type: 'SET_FILE_TAGS'; payload: { folderId: string; fileId: string; tags: string[] } }
+  | { type: 'CREATE_BOARD_FROM_TEMPLATE'; payload: { name: string; columns: { name: string; color: string }[] } }
   | { type: 'SET_THEME'; payload: { theme: ThemeMode } }
   | { type: 'RESTORE_STATE'; payload: AppState };

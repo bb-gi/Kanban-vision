@@ -2,13 +2,14 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripHorizontal, Upload, Plus, Loader2 } from 'lucide-react';
+import { GripHorizontal, Upload, Plus, Loader2, Filter, X } from 'lucide-react';
 import type { Folder, FileItem } from '../../types';
 import { FileCard } from './FileCard';
 import { useApp } from '../../context/AppContext';
 import { readDroppedFiles } from '../../lib/fileReader';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { DragEvent } from 'react';
+import { getTagColor } from '../TagEditor';
 
 interface ColumnProps {
   folder: Folder;
@@ -21,6 +22,17 @@ export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
   const isDark = state.theme === 'dark';
   const [isDragOver, setIsDragOver] = useState(false);
   const [isDropLoading, setIsDropLoading] = useState(false);
+  const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
+  const [showTagFilter, setShowTagFilter] = useState(false);
+
+  // Collect all unique tags from files in this column
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    for (const file of folder.files) {
+      if (file.tags) file.tags.forEach((t) => tags.add(t));
+    }
+    return Array.from(tags).sort();
+  }, [folder.files]);
 
   const {
     attributes,
@@ -79,6 +91,10 @@ export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
     }
   };
 
+  const filteredCount = activeTagFilter
+    ? folder.files.filter((f) => f.tags?.includes(activeTagFilter)).length
+    : folder.files.length;
+
   return (
     <div
       ref={setSortableRef}
@@ -104,7 +120,7 @@ export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
           className={`shrink-0 cursor-grab active:cursor-grabbing ${
             isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'
           }`}
-          aria-label={`Déplacer la colonne ${folder.displayName}`}
+          aria-label={`Deplacer la colonne ${folder.displayName}`}
         >
           <GripHorizontal size={14} />
         </button>
@@ -116,8 +132,23 @@ export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
           {folder.displayName}
         </h3>
         <span className={`text-xs shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-          {folder.files.length}
+          {activeTagFilter ? `${filteredCount}/${folder.files.length}` : folder.files.length}
         </span>
+        {allTags.length > 0 && (
+          <button
+            onClick={() => setShowTagFilter(!showTagFilter)}
+            className={`shrink-0 transition-colors p-0.5 rounded ${
+              activeTagFilter
+                ? 'text-indigo-400'
+                : isDark
+                  ? 'text-gray-400 hover:text-white hover:bg-gray-600'
+                  : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'
+            }`}
+            aria-label="Filtrer par tag"
+          >
+            <Filter size={12} />
+          </button>
+        )}
         <button
           onClick={() => onCreateFile(folder.id)}
           className={`shrink-0 transition-colors p-0.5 rounded ${
@@ -130,6 +161,37 @@ export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
           <Plus size={14} />
         </button>
       </div>
+
+      {/* Tag filter bar */}
+      {showTagFilter && allTags.length > 0 && (
+        <div className={`px-2 py-1.5 flex items-center gap-1 flex-wrap border-b ${
+          isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'
+        }`}>
+          {activeTagFilter && (
+            <button
+              onClick={() => setActiveTagFilter(null)}
+              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium transition-colors ${
+                isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+              }`}
+            >
+              <X size={8} />
+              Tous
+            </button>
+          )}
+          {allTags.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => setActiveTagFilter(activeTagFilter === tag ? null : tag)}
+              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium transition-all ${
+                activeTagFilter === tag ? 'ring-2 ring-white/30 scale-105' : 'opacity-70 hover:opacity-100'
+              }`}
+              style={{ backgroundColor: getTagColor(tag) + 'cc', color: 'white' }}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* File list */}
       <div
@@ -148,6 +210,7 @@ export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
               file={file}
               folderId={folder.id}
               onClick={() => onFileClick(file)}
+              tagFilter={activeTagFilter}
             />
           ))}
         </SortableContext>

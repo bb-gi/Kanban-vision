@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   FolderSearch, RefreshCw, PanelLeftClose, PanelLeft, Loader2,
-  GitBranch, Sun, Moon, Download, Upload, Search, Undo2, Redo2,
+  GitBranch, Sun, Moon, Download, Upload, Search, Undo2, Redo2, Layout,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { BoardList } from './BoardList';
@@ -17,9 +17,10 @@ interface SidebarProps {
   onExport: () => void;
   onImport: () => void;
   onSearch: () => void;
+  onOpenTemplates: () => void;
 }
 
-export function Sidebar({ isOpen, onToggle, onExport, onImport, onSearch }: SidebarProps) {
+export function Sidebar({ isOpen, onToggle, onExport, onImport, onSearch, onOpenTemplates }: SidebarProps) {
   const { state, dispatch, undo, redo, canUndo, canRedo } = useApp();
 
   const isDark = state.theme === 'dark';
@@ -205,6 +206,17 @@ export function Sidebar({ isOpen, onToggle, onExport, onImport, onSearch }: Side
       {/* Boards section */}
       <div className={`border-b py-2 ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
         <BoardList boards={state.boards} activeBoardId={state.activeBoardId} />
+        <button
+          onClick={onOpenTemplates}
+          className={`mx-3 mt-1 flex items-center gap-2 w-[calc(100%-24px)] px-3 py-1.5 rounded text-xs transition-colors ${
+            isDark
+              ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          <Layout size={12} />
+          Utiliser un template
+        </button>
       </div>
 
       {/* Scan / Refresh / GitLab buttons */}

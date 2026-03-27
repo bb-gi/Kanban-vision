@@ -3,7 +3,11 @@ import { AppProvider } from './context/AppContext';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { Dashboard } from './components/Dashboard/Dashboard';
 import { SearchBar } from './components/SearchBar';
+import { WelcomePage } from './components/WelcomePage';
+import { TemplatePicker } from './components/TemplatePicker';
 import { useApp } from './context/AppContext';
+import { pickAndReadDirectory } from './lib/fileReader';
+import { getNextColor } from './lib/folderUtils';
 import type { FileItem } from './types';
 
 function AppContent() {
@@ -11,8 +15,11 @@ function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
   const [viewingFile, setViewingFile] = useState<FileItem | null>(null);
+  const [templateOpen, setTemplateOpen] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
 
   const isDark = state.theme === 'dark';
+  const isEmpty = state.projects.length === 0 && state.boards.length === 0;
 
   // Apply theme class to document
   useEffect(() => {
@@ -25,19 +32,16 @@ function AppContent() {
     (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
 
-      // Cmd+K - Search
       if (mod && e.key === 'k') {
         e.preventDefault();
         setSearchOpen((v) => !v);
         return;
       }
-      // Cmd+Z - Undo
       if (mod && !e.shiftKey && e.key === 'z') {
         e.preventDefault();
         undo();
         return;
       }
-      // Cmd+Shift+Z / Cmd+Y - Redo
       if ((mod && e.shiftKey && e.key === 'z') || (mod && e.key === 'y')) {
         e.preventDefault();
         redo();
@@ -85,6 +89,29 @@ function AppContent() {
     input.click();
   }, [dispatch, state.theme]);
 
+  // Scan directory (shared between sidebar and welcome page)
+  const handleScanDirectory = useCallback(async () => {
+    if (isScanning) return;
+    setIsScanning(true);
+    try {
+      const result = await pickAndReadDirectory();
+      if (result.folders.length > 0) {
+        dispatch({
+          type: 'IMPORT_PROJECT',
+          payload: {
+            name: result.rootName,
+            folders: result.folders,
+            color: getNextColor(),
+          },
+        });
+      }
+    } catch (err) {
+      console.error('Failed to read directory:', err);
+    } finally {
+      setIsScanning(false);
+    }
+  }, [isScanning, dispatch]);
+
   return (
     <div className={`flex h-screen overflow-hidden transition-colors duration-200 ${
       isDark
@@ -97,15 +124,31 @@ function AppContent() {
         onExport={handleExport}
         onImport={handleImport}
         onSearch={() => setSearchOpen(true)}
+        onOpenTemplates={() => setTemplateOpen(true)}
       />
-      <Dashboard
-        externalViewFile={viewingFile}
-        onClearExternalView={() => setViewingFile(null)}
-      />
+
+      {isEmpty ? (
+        <WelcomePage
+          onScanDirectory={handleScanDirectory}
+          onOpenTemplates={() => setTemplateOpen(true)}
+          isScanning={isScanning}
+        />
+      ) : (
+        <Dashboard
+          externalViewFile={viewingFile}
+          onClearExternalView={() => setViewingFile(null)}
+        />
+      )}
+
       <SearchBar
         isOpen={searchOpen}
         onClose={() => setSearchOpen(false)}
         onFileSelect={(file) => setViewingFile(file)}
+      />
+
+      <TemplatePicker
+        isOpen={templateOpen}
+        onClose={() => setTemplateOpen(false)}
       />
     </div>
   );

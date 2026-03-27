@@ -2,7 +2,7 @@ import { useReducer, useEffect, useCallback, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { AppState, AppAction, Folder } from '../types';
 import { DEFAULT_STATE } from '../types';
-import { useLocalStorage } from './useLocalStorage';
+import { useIndexedDB } from './useIndexedDB';
 import { useHistory } from './useHistory';
 import {
   updateFolderById,
@@ -18,6 +18,7 @@ const UNDOABLE_ACTIONS = new Set([
   'MOVE_FILE', 'REORDER_FILES', 'DELETE_BOARD', 'RENAME_BOARD',
   'TOGGLE_COLUMN', 'REORDER_COLUMNS', 'ADD_FILES_TO_FOLDER',
   'DELETE_FILE', 'IMPORT_PROJECT', 'CREATE_BOARD', 'ADD_FOLDER',
+  'SET_FILE_TAGS', 'CREATE_BOARD_FROM_TEMPLATE',
 ]);
 
 // Helper: apply a folder operation across all projects
@@ -347,6 +348,64 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
+    case 'SET_FILE_TAGS':
+      return mapAllFolders(state, (folders) =>
+        updateFolderById(folders, action.payload.folderId, (f) => ({
+          ...f,
+          files: f.files.map((file) =>
+            file.id === action.payload.fileId
+              ? { ...file, tags: action.payload.tags }
+              : file
+          ),
+        }))
+      );
+
+    case 'CREATE_BOARD_FROM_TEMPLATE': {
+      const { name, columns } = action.payload;
+      const projectId = state.activeProjectId || uuidv4();
+      const newFolders: Folder[] = columns.map((col) => ({
+        id: uuidv4(),
+        originalName: col.name,
+        displayName: col.name,
+        color: col.color,
+        files: [],
+        subfolders: [],
+      }));
+      const newBoard = {
+        id: uuidv4(),
+        name,
+        columnLayout: newFolders.map((f) => f.id),
+      };
+      // If no active project, create one
+      const hasProject = state.projects.some((p) => p.id === projectId);
+      if (!hasProject) {
+        const newProject = {
+          id: projectId,
+          name,
+          color: columns[0]?.color || '#6366f1',
+          folders: newFolders,
+        };
+        return {
+          ...state,
+          projects: [...state.projects, newProject],
+          boards: [...state.boards, newBoard],
+          activeBoardId: newBoard.id,
+          activeProjectId: projectId,
+        };
+      }
+      // Add folders to existing project
+      return {
+        ...state,
+        projects: state.projects.map((p) =>
+          p.id === projectId
+            ? { ...p, folders: [...p.folders, ...newFolders] }
+            : p
+        ),
+        boards: [...state.boards, newBoard],
+        activeBoardId: newBoard.id,
+      };
+    }
+
     case 'SET_THEME':
       return { ...state, theme: action.payload.theme };
 
@@ -359,13 +418,23 @@ function appReducer(state: AppState, action: AppAction): AppState {
 }
 
 export function useAppState() {
-  const [persisted, setPersisted] = useLocalStorage<AppState>(
+  const [persisted, setPersisted, isLoaded] = useIndexedDB<AppState>(
     'kanban-vision-data',
     DEFAULT_STATE
   );
   // Ensure theme field exists for old persisted data
   const initialState: AppState = { ...DEFAULT_STATE, ...persisted, theme: persisted.theme ?? 'dark' };
   const [state, rawDispatch] = useReducer(appReducer, initialState);
+  const hasHydratedRef = useRef(false);
+
+  // Hydrate from IndexedDB when loaded
+  useEffect(() => {
+    if (isLoaded && !hasHydratedRef.current) {
+      hasHydratedRef.current = true;
+      const hydrated: AppState = { ...DEFAULT_STATE, ...persisted, theme: persisted.theme ?? 'dark' };
+      rawDispatch({ type: 'RESTORE_STATE', payload: hydrated });
+    }
+  }, [isLoaded, persisted]);
   const history = useHistory();
   const stateRef = useRef(state);
   stateRef.current = state;
