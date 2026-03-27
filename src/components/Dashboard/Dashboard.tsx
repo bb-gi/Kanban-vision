@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   DndContext,
   PointerSensor,
@@ -25,11 +25,30 @@ function findFolderAcrossProjects(state: { projects: { folders: Folder[] }[] }, 
   return null;
 }
 
-export function Dashboard() {
+interface DashboardProps {
+  externalViewFile?: FileItem | null;
+  onClearExternalView?: () => void;
+}
+
+export function Dashboard({ externalViewFile, onClearExternalView }: DashboardProps) {
   const { state, dispatch } = useApp();
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [creatingInFolderId, setCreatingInFolderId] = useState<string | null>(null);
+
+  const isDark = state.theme === 'dark';
+
+  // Handle external file view (from search)
+  useEffect(() => {
+    if (externalViewFile) {
+      setSelectedFile(externalViewFile);
+    }
+  }, [externalViewFile]);
+
+  const handleCloseViewer = useCallback(() => {
+    setSelectedFile(null);
+    onClearExternalView?.();
+  }, [onClearExternalView]);
 
   const handleSaveNewFile = useCallback((folderId: string, file: FileItem) => {
     dispatch({
@@ -66,7 +85,6 @@ export function Dashboard() {
 
       if (!activeData || activeData.type !== 'file') return;
 
-      // Determine target folder
       let targetFolderId: string | null = null;
 
       if (overData?.type === 'file') {
@@ -98,7 +116,6 @@ export function Dashboard() {
       const activeData = active.data.current;
       const overData = over.data.current;
 
-      // Column reorder
       if (activeData?.type === 'column' && overData?.type === 'column') {
         const oldIndex = activeBoard.columnLayout.indexOf(activeData.folderId);
         const newIndex = activeBoard.columnLayout.indexOf(overData.folderId);
@@ -114,7 +131,6 @@ export function Dashboard() {
         return;
       }
 
-      // File reorder within same column
       if (activeData?.type === 'file' && overData?.type === 'file') {
         if (activeData.folderId === overData.folderId) {
           const folder = findFolderAcrossProjects(state, activeData.folderId);
@@ -141,26 +157,24 @@ export function Dashboard() {
     [activeBoard, state.projects, dispatch]
   );
 
-  // No board selected
   if (!activeBoard) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-gray-500 bg-gray-950">
-        <LayoutDashboard size={48} className="mb-4 text-gray-600" />
-        <p className="text-lg text-gray-400">Aucun tableau sélectionné</p>
-        <p className="text-sm mt-1">
+      <div className={`flex-1 flex flex-col items-center justify-center ${isDark ? 'text-gray-500 bg-gray-950' : 'text-gray-400 bg-gray-50'}`}>
+        <LayoutDashboard size={48} className={`mb-4 ${isDark ? 'text-gray-600' : 'text-gray-300'}`} />
+        <p className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Aucun tableau sélectionné</p>
+        <p className={`text-sm mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
           Créez un tableau dans la sidebar pour commencer
         </p>
       </div>
     );
   }
 
-  // Board with no columns
   if (columns.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-gray-500 bg-gray-950">
-        <LayoutDashboard size={48} className="mb-4 text-gray-600" />
-        <p className="text-lg text-gray-400">{activeBoard.name}</p>
-        <p className="text-sm mt-1">
+      <div className={`flex-1 flex flex-col items-center justify-center ${isDark ? 'text-gray-500 bg-gray-950' : 'text-gray-400 bg-gray-50'}`}>
+        <LayoutDashboard size={48} className={`mb-4 ${isDark ? 'text-gray-600' : 'text-gray-300'}`} />
+        <p className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{activeBoard.name}</p>
+        <p className={`text-sm mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
           Cochez des dossiers dans l'explorateur pour les ajouter comme colonnes
         </p>
       </div>
@@ -168,10 +182,10 @@ export function Dashboard() {
   }
 
   return (
-    <div className="flex-1 bg-gray-950 flex flex-col overflow-hidden">
+    <div className={`flex-1 flex flex-col overflow-hidden ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
       {/* Board name header */}
-      <div className="px-6 py-3 border-b border-gray-800">
-        <h2 className="text-lg font-semibold text-white">{activeBoard.name}</h2>
+      <div className={`px-6 py-3 border-b ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+        <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{activeBoard.name}</h2>
       </div>
 
       {/* Columns area */}
@@ -209,7 +223,7 @@ export function Dashboard() {
       {selectedFile && (
         <MarkdownViewer
           file={selectedFile}
-          onClose={() => setSelectedFile(null)}
+          onClose={handleCloseViewer}
         />
       )}
 

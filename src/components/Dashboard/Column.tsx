@@ -17,7 +17,8 @@ interface ColumnProps {
 }
 
 export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
-  const { dispatch } = useApp();
+  const { state, dispatch } = useApp();
+  const isDark = state.theme === 'dark';
   const [isDragOver, setIsDragOver] = useState(false);
   const [isDropLoading, setIsDropLoading] = useState(false);
 
@@ -46,7 +47,6 @@ export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
 
   const fileIds = folder.files.map((f) => `${folder.id}::${f.id}`);
 
-  // Handle OS file drop
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -63,7 +63,6 @@ export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
     e.stopPropagation();
     setIsDragOver(false);
 
-    // Only process OS file drops (not @dnd-kit internal)
     if (e.dataTransfer.files.length > 0) {
       setIsDropLoading(true);
       try {
@@ -84,17 +83,28 @@ export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
     <div
       ref={setSortableRef}
       style={style}
-      className="w-72 shrink-0 flex flex-col bg-gray-800 rounded-lg border border-gray-700 max-h-full"
+      className={`w-72 shrink-0 flex flex-col rounded-lg border max-h-full transition-colors ${
+        isDark
+          ? 'bg-gray-800 border-gray-700'
+          : 'bg-white border-gray-200 shadow-sm'
+      }`}
+      role="region"
+      aria-label={`Colonne ${folder.displayName}`}
     >
       {/* Column header */}
       <div
-        className="flex items-center gap-2 px-3 py-2.5 rounded-t-lg border-b border-gray-700"
-        style={{ backgroundColor: folder.color + '20' }}
+        className={`flex items-center gap-2 px-3 py-2.5 rounded-t-lg border-b ${
+          isDark ? 'border-gray-700' : 'border-gray-200'
+        }`}
+        style={{ backgroundColor: folder.color + (isDark ? '20' : '15') }}
       >
         <button
           {...attributes}
           {...listeners}
-          className="shrink-0 text-gray-400 hover:text-gray-200 cursor-grab active:cursor-grabbing"
+          className={`shrink-0 cursor-grab active:cursor-grabbing ${
+            isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'
+          }`}
+          aria-label={`Déplacer la colonne ${folder.displayName}`}
         >
           <GripHorizontal size={14} />
         </button>
@@ -102,16 +112,20 @@ export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
           className="w-2.5 h-2.5 rounded-full shrink-0"
           style={{ backgroundColor: folder.color }}
         />
-        <h3 className="text-sm font-semibold text-white truncate flex-1">
+        <h3 className={`text-sm font-semibold truncate flex-1 ${isDark ? 'text-white' : 'text-gray-800'}`}>
           {folder.displayName}
         </h3>
-        <span className="text-xs text-gray-400 shrink-0">
+        <span className={`text-xs shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           {folder.files.length}
         </span>
         <button
           onClick={() => onCreateFile(folder.id)}
-          className="shrink-0 text-gray-400 hover:text-white transition-colors p-0.5 rounded hover:bg-gray-600"
-          title="Nouveau fichier"
+          className={`shrink-0 transition-colors p-0.5 rounded ${
+            isDark
+              ? 'text-gray-400 hover:text-white hover:bg-gray-600'
+              : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'
+          }`}
+          aria-label={`Nouveau fichier dans ${folder.displayName}`}
         >
           <Plus size={14} />
         </button>
@@ -141,12 +155,14 @@ export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
         {isDropLoading && (
           <div className="flex flex-col items-center justify-center py-4 text-indigo-400 text-xs">
             <Loader2 size={16} className="animate-spin mb-1" />
-            <p>Importation…</p>
+            <p>Importation...</p>
           </div>
         )}
 
         {folder.files.length === 0 && !isDropLoading && (
-          <div className="flex flex-col items-center justify-center py-4 text-gray-500 text-xs">
+          <div className={`flex flex-col items-center justify-center py-4 text-xs ${
+            isDark ? 'text-gray-500' : 'text-gray-400'
+          }`}>
             <Upload size={16} className="mb-1" />
             <p>Glissez des fichiers .md ici</p>
           </div>

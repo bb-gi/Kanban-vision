@@ -3,6 +3,7 @@ import type { Folder, Board } from '../../types';
 import { FolderItem } from './FolderItem';
 import { FolderOpen, ChevronsUpDown, ChevronsDownUp } from 'lucide-react';
 import { collectAllFolderIds } from '../../lib/folderUtils';
+import { useApp } from '../../context/AppContext';
 
 interface FolderTreeProps {
   folders: Folder[];
@@ -10,6 +11,8 @@ interface FolderTreeProps {
 }
 
 export function FolderTree({ folders, activeBoard }: FolderTreeProps) {
+  const { state } = useApp();
+  const isDark = state.theme === 'dark';
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const toggleFolder = useCallback((id: string) => {
@@ -31,10 +34,10 @@ export function FolderTree({ folders, activeBoard }: FolderTreeProps) {
 
   if (folders.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-gray-500 text-sm">
-        <FolderOpen size={32} className="mb-2 text-gray-600" />
+      <div className={`flex flex-col items-center justify-center py-8 text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+        <FolderOpen size={32} className={`mb-2 ${isDark ? 'text-gray-600' : 'text-gray-300'}`} />
         <p>Aucun dossier</p>
-        <p className="text-xs text-gray-600 mt-1">
+        <p className={`text-xs mt-1 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
           Utilisez le bouton ci-dessus pour scanner un dossier
         </p>
       </div>
@@ -46,14 +49,20 @@ export function FolderTree({ folders, activeBoard }: FolderTreeProps) {
       <div className="flex items-center justify-end gap-1 px-2 pb-1">
         <button
           onClick={expandAll}
-          className="p-1 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700"
+          className={`p-1 transition-colors rounded ${
+            isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100'
+          }`}
+          aria-label="Tout déplier"
           title="Tout déplier"
         >
           <ChevronsUpDown size={14} />
         </button>
         <button
           onClick={collapseAll}
-          className="p-1 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700"
+          className={`p-1 transition-colors rounded ${
+            isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100'
+          }`}
+          aria-label="Tout plier"
           title="Tout plier"
         >
           <ChevronsDownUp size={14} />

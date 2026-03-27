@@ -10,8 +10,26 @@ interface FileCardProps {
   onClick: () => void;
 }
 
+function getPreview(content: string): string {
+  if (!content) return '';
+  // Strip markdown headings, links, images, code blocks, and extra whitespace
+  const cleaned = content
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/!\[.*?\]\(.*?\)/g, '')
+    .replace(/\[([^\]]*)\]\(.*?\)/g, '$1')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/[*_~]{1,3}/g, '')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/^\s*\d+\.\s+/gm, '')
+    .replace(/\n{2,}/g, '\n')
+    .trim();
+  return cleaned.slice(0, 120);
+}
+
 export function FileCard({ file, folderId, onClick }: FileCardProps) {
-  const { dispatch } = useApp();
+  const { state, dispatch } = useApp();
+  const isDark = state.theme === 'dark';
   const sortableId = `${folderId}::${file.id}`;
   const {
     attributes,
@@ -36,37 +54,61 @@ export function FileCard({ file, folderId, onClick }: FileCardProps) {
     dispatch({ type: 'DELETE_FILE', payload: { folderId, fileId: file.id } });
   };
 
+  const preview = getPreview(file.content);
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-2 bg-gray-700/50 hover:bg-gray-700 rounded px-2 py-1.5 cursor-pointer group transition-colors border border-gray-600/50"
+      className={`flex flex-col gap-1 rounded px-2.5 py-2 cursor-pointer group transition-all duration-150 border animate-cardIn ${
+        isDark
+          ? 'bg-gray-700/50 hover:bg-gray-700 border-gray-600/50'
+          : 'bg-white hover:bg-gray-50 border-gray-200 shadow-sm'
+      }`}
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      aria-label={`Fichier ${file.title}`}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
     >
-      <button
-        {...attributes}
-        {...listeners}
-        className="shrink-0 text-gray-500 hover:text-gray-300 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <GripVertical size={12} />
-      </button>
-      {file.gitlabIssueIid ? (
-        <GitBranch size={14} className="shrink-0 text-orange-400" />
-      ) : (
-        <FileText size={14} className="shrink-0 text-gray-400" />
+      <div className="flex items-center gap-2">
+        <button
+          {...attributes}
+          {...listeners}
+          className={`shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity ${
+            isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+          aria-label="Déplacer le fichier"
+        >
+          <GripVertical size={12} />
+        </button>
+        {file.gitlabIssueIid ? (
+          <GitBranch size={14} className="shrink-0 text-orange-400" />
+        ) : (
+          <FileText size={14} className={`shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+        )}
+        <span className={`text-sm truncate flex-1 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+          {file.gitlabIssueIid ? `#${file.gitlabIssueIid} ` : ''}
+          {file.title.replace(/\.md$/, '')}
+        </span>
+        <button
+          onClick={handleDelete}
+          className={`shrink-0 p-1 transition-colors opacity-0 group-hover:opacity-100 ${
+            isDark ? 'text-gray-400 hover:text-red-400' : 'text-gray-400 hover:text-red-500'
+          }`}
+          aria-label={`Supprimer ${file.title}`}
+        >
+          <Trash2 size={12} />
+        </button>
+      </div>
+      {preview && (
+        <p className={`text-xs leading-relaxed line-clamp-2 pl-6 ${
+          isDark ? 'text-gray-400' : 'text-gray-500'
+        }`}>
+          {preview}
+        </p>
       )}
-      <span className="text-sm text-gray-200 truncate flex-1">
-        {file.gitlabIssueIid ? `#${file.gitlabIssueIid} ` : ''}
-        {file.title.replace(/\.md$/, '')}
-      </span>
-      <button
-        onClick={handleDelete}
-        className="shrink-0 p-1 text-gray-400 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-        title="Supprimer"
-      >
-        <Trash2 size={12} />
-      </button>
     </div>
   );
 }

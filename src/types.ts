@@ -35,11 +35,14 @@ export interface Board {
   columnLayout: string[]; // folder IDs from any project
 }
 
+export type ThemeMode = 'dark' | 'light';
+
 export interface AppState {
   projects: Project[];
   boards: Board[];
   activeBoardId: string | null;
   activeProjectId: string | null;
+  theme: ThemeMode;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -47,6 +50,7 @@ export const DEFAULT_STATE: AppState = {
   boards: [],
   activeBoardId: null,
   activeProjectId: null,
+  theme: 'dark',
 };
 
 export type AppAction =
@@ -73,4 +77,6 @@ export type AppAction =
   | { type: 'SET_GITLAB_CONFIG'; payload: { projectId: string; config: GitLabConfig } }
   | { type: 'REMOVE_GITLAB_CONFIG'; payload: { projectId: string } }
   | { type: 'SET_FOLDER_GITLAB_LABEL'; payload: { folderId: string; label: string } }
-  | { type: 'SYNC_GITLAB_ISSUES'; payload: { projectId: string; folderId: string; files: FileItem[] } };
+  | { type: 'SYNC_GITLAB_ISSUES'; payload: { projectId: string; folderId: string; files: FileItem[] } }
+  | { type: 'SET_THEME'; payload: { theme: ThemeMode } }
+  | { type: 'RESTORE_STATE'; payload: AppState };

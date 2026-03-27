@@ -1,8 +1,9 @@
-import { useReducer, useEffect } from 'react';
+import { useReducer, useEffect, useCallback, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { AppState, AppAction, Folder } from '../types';
 import { DEFAULT_STATE } from '../types';
 import { useLocalStorage } from './useLocalStorage';
+import { useHistory } from './useHistory';
 import {
   updateFolderById,
   removeFolderById,
@@ -10,6 +11,14 @@ import {
   reorderFiles,
   collectAllFolderIds,
 } from '../lib/folderUtils';
+
+// Actions that should be tracked in undo history
+const UNDOABLE_ACTIONS = new Set([
+  'DELETE_PROJECT', 'RENAME_PROJECT', 'DELETE_FOLDER', 'RENAME_FOLDER',
+  'MOVE_FILE', 'REORDER_FILES', 'DELETE_BOARD', 'RENAME_BOARD',
+  'TOGGLE_COLUMN', 'REORDER_COLUMNS', 'ADD_FILES_TO_FOLDER',
+  'DELETE_FILE', 'IMPORT_PROJECT', 'CREATE_BOARD', 'ADD_FOLDER',
+]);
 
 // Helper: apply a folder operation across all projects
 function mapAllFolders(
@@ -338,6 +347,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
+    case 'SET_THEME':
+      return { ...state, theme: action.payload.theme };
+
+    case 'RESTORE_STATE':
+      return action.payload;
+
     default:
       return state;
   }
@@ -348,11 +363,36 @@ export function useAppState() {
     'kanban-vision-data',
     DEFAULT_STATE
   );
-  const [state, dispatch] = useReducer(appReducer, persisted);
+  // Ensure theme field exists for old persisted data
+  const initialState: AppState = { ...DEFAULT_STATE, ...persisted, theme: persisted.theme ?? 'dark' };
+  const [state, rawDispatch] = useReducer(appReducer, initialState);
+  const history = useHistory();
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  const dispatch = useCallback(
+    (action: AppAction) => {
+      if (UNDOABLE_ACTIONS.has(action.type)) {
+        history.push(stateRef.current);
+      }
+      rawDispatch(action);
+    },
+    [history]
+  );
+
+  const undo = useCallback(() => {
+    const prev = history.undo(stateRef.current);
+    if (prev) rawDispatch({ type: 'RESTORE_STATE', payload: prev });
+  }, [history]);
+
+  const redo = useCallback(() => {
+    const next = history.redo(stateRef.current);
+    if (next) rawDispatch({ type: 'RESTORE_STATE', payload: next });
+  }, [history]);
 
   useEffect(() => {
     setPersisted(state);
   }, [state, setPersisted]);
 
-  return { state, dispatch };
+  return { state, dispatch, undo, redo, canUndo: history.canUndo, canRedo: history.canRedo };
 }
