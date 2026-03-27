@@ -2,6 +2,13 @@ export interface FileItem {
   id: string;
   title: string;
   content: string;
+  gitlabIssueIid?: number;
+}
+
+export interface GitLabConfig {
+  instanceUrl: string;
+  token: string;
+  projectId: number;
 }
 
 export interface Folder {
@@ -11,6 +18,7 @@ export interface Folder {
   color: string;
   files: FileItem[];
   subfolders: Folder[];
+  gitlabLabel?: string;
 }
 
 export interface Project {
@@ -18,6 +26,7 @@ export interface Project {
   name: string;
   color: string;
   folders: Folder[];
+  gitlabConfig?: GitLabConfig;
 }
 
 export interface Board {
@@ -59,4 +68,9 @@ export type AppAction =
   | { type: 'SET_ACTIVE_BOARD'; payload: { boardId: string } }
   | { type: 'TOGGLE_COLUMN'; payload: { boardId: string; folderId: string } }
   | { type: 'REORDER_COLUMNS'; payload: { boardId: string; columnLayout: string[] } }
-  | { type: 'ADD_FILES_TO_FOLDER'; payload: { folderId: string; files: FileItem[] } };
+  | { type: 'ADD_FILES_TO_FOLDER'; payload: { folderId: string; files: FileItem[] } }
+  | { type: 'DELETE_FILE'; payload: { folderId: string; fileId: string } }
+  | { type: 'SET_GITLAB_CONFIG'; payload: { projectId: string; config: GitLabConfig } }
+  | { type: 'REMOVE_GITLAB_CONFIG'; payload: { projectId: string } }
+  | { type: 'SET_FOLDER_GITLAB_LABEL'; payload: { folderId: string; label: string } }
+  | { type: 'SYNC_GITLAB_ISSUES'; payload: { projectId: string; folderId: string; files: FileItem[] } };

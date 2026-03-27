@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { FolderSearch, RefreshCw, PanelLeftClose, PanelLeft, Loader2 } from 'lucide-react';
+import { FolderSearch, RefreshCw, PanelLeftClose, PanelLeft, Loader2, GitBranch } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { BoardList } from './BoardList';
 import { ProjectList } from './ProjectList';
+import { GitLabSettings } from './GitLabSettings';
 import { pickAndReadDirectory } from '../../lib/fileReader';
 import { getNextColor } from '../../lib/folderUtils';
 
@@ -17,6 +18,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const activeBoard = state.boards.find((b) => b.id === state.activeBoardId) ?? null;
   const activeProject = state.projects.find((p) => p.id === state.activeProjectId) ?? null;
   const [isScanning, setIsScanning] = useState(false);
+  const [showGitLab, setShowGitLab] = useState(false);
 
   const handleScanDirectory = async () => {
     if (isScanning) return;
@@ -92,7 +94,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
         <BoardList boards={state.boards} activeBoardId={state.activeBoardId} />
       </div>
 
-      {/* Scan / Refresh buttons */}
+      {/* Scan / Refresh / GitLab buttons */}
       <div className="flex gap-2 px-3 py-3 border-b border-gray-700">
         <button
           onClick={handleScanDirectory}
@@ -107,18 +109,31 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           {isScanning ? 'Chargement…' : 'Nouveau projet'}
         </button>
         {activeProject && (
-          <button
-            onClick={handleRefresh}
-            disabled={isScanning}
-            className="flex items-center gap-1 bg-gray-700 hover:bg-gray-600 text-white text-sm px-3 py-1.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Rafraîchir le projet actif"
-          >
-            {isScanning ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <RefreshCw size={14} />
-            )}
-          </button>
+          <>
+            <button
+              onClick={handleRefresh}
+              disabled={isScanning}
+              className="flex items-center gap-1 bg-gray-700 hover:bg-gray-600 text-white text-sm px-3 py-1.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Rafraîchir le projet actif"
+            >
+              {isScanning ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <RefreshCw size={14} />
+              )}
+            </button>
+            <button
+              onClick={() => setShowGitLab(true)}
+              className={`flex items-center gap-1 text-sm px-3 py-1.5 rounded transition-colors ${
+                activeProject.gitlabConfig
+                  ? 'bg-orange-600/20 text-orange-400 hover:bg-orange-600/40'
+                  : 'bg-gray-700 hover:bg-gray-600 text-white'
+              }`}
+              title="Paramètres GitLab"
+            >
+              <GitBranch size={14} />
+            </button>
+          </>
         )}
       </div>
 
@@ -144,6 +159,14 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           />
         )}
       </div>
+
+      {/* GitLab settings modal */}
+      {showGitLab && activeProject && (
+        <GitLabSettings
+          project={activeProject}
+          onClose={() => setShowGitLab(false)}
+        />
+      )}
     </div>
   );
 }
