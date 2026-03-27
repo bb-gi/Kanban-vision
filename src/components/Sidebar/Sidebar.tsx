@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   FolderSearch, RefreshCw, PanelLeftClose, PanelLeft, Loader2,
   GitBranch, Sun, Moon, Download, Upload, Search, Undo2, Redo2, Layout,
-  Sparkles, Share2,
+  Sparkles, Share2, BarChart3,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { BoardList } from './BoardList';
@@ -21,9 +21,10 @@ interface SidebarProps {
   onOpenTemplates: () => void;
   onOpenAI: () => void;
   onOpenGraph: () => void;
+  onOpenStats: () => void;
 }
 
-export function Sidebar({ isOpen, onToggle, onExport, onImport, onSearch, onOpenTemplates, onOpenAI, onOpenGraph }: SidebarProps) {
+export function Sidebar({ isOpen, onToggle, onExport, onImport, onSearch, onOpenTemplates, onOpenAI, onOpenGraph, onOpenStats }: SidebarProps) {
   const { state, dispatch, undo, redo, canUndo, canRedo } = useApp();
 
   const isDark = state.theme === 'dark';
@@ -203,6 +204,16 @@ export function Sidebar({ isOpen, onToggle, onExport, onImport, onSearch, onOpen
           title="Graphe (Ctrl+G)"
         >
           <Share2 size={14} />
+        </button>
+        <button
+          onClick={onOpenStats}
+          className={`p-1.5 rounded transition-colors ${
+            isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100'
+          }`}
+          aria-label="Statistiques"
+          title="Statistiques"
+        >
+          <BarChart3 size={14} />
         </button>
         <button
           onClick={onExport}

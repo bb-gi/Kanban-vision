@@ -4,6 +4,7 @@ export interface FileItem {
   content: string;
   gitlabIssueIid?: number;
   tags?: string[];
+  dueDate?: string; // ISO date string
 }
 
 export interface GitLabConfig {
@@ -79,7 +80,10 @@ export type AppAction =
   | { type: 'REMOVE_GITLAB_CONFIG'; payload: { projectId: string } }
   | { type: 'SET_FOLDER_GITLAB_LABEL'; payload: { folderId: string; label: string } }
   | { type: 'SYNC_GITLAB_ISSUES'; payload: { projectId: string; folderId: string; files: FileItem[] } }
+  | { type: 'UPDATE_FILE'; payload: { folderId: string; fileId: string; title: string; content: string } }
   | { type: 'SET_FILE_TAGS'; payload: { folderId: string; fileId: string; tags: string[] } }
+  | { type: 'SET_FILE_DUE_DATE'; payload: { folderId: string; fileId: string; dueDate: string | undefined } }
+  | { type: 'DUPLICATE_FILE'; payload: { folderId: string; fileId: string } }
   | { type: 'CREATE_BOARD_FROM_TEMPLATE'; payload: { name: string; columns: { name: string; color: string }[] } }
   | { type: 'SET_THEME'; payload: { theme: ThemeMode } }
   | { type: 'RESTORE_STATE'; payload: AppState };

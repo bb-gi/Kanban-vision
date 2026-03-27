@@ -31,12 +31,13 @@ function findFolderAcrossProjects(state: { projects: { folders: Folder[] }[] }, 
 
 interface DashboardProps {
   externalViewFile?: FileItem | null;
+  externalViewFolderId?: string;
   onClearExternalView?: () => void;
 }
 
-export function Dashboard({ externalViewFile, onClearExternalView }: DashboardProps) {
+export function Dashboard({ externalViewFile, externalViewFolderId, onClearExternalView }: DashboardProps) {
   const { state, dispatch } = useApp();
-  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
+  const [selectedFile, setSelectedFile] = useState<{ file: FileItem; folderId?: string } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [creatingInFolderId, setCreatingInFolderId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('kanban');
@@ -45,9 +46,13 @@ export function Dashboard({ externalViewFile, onClearExternalView }: DashboardPr
 
   useEffect(() => {
     if (externalViewFile) {
-      setSelectedFile(externalViewFile);
+      setSelectedFile({ file: externalViewFile, folderId: externalViewFolderId });
     }
-  }, [externalViewFile]);
+  }, [externalViewFile, externalViewFolderId]);
+
+  const handleFileClick = useCallback((file: FileItem, folderId?: string) => {
+    setSelectedFile({ file, folderId });
+  }, []);
 
   const handleCloseViewer = useCallback(() => {
     setSelectedFile(null);
@@ -211,7 +216,7 @@ export function Dashboard({ externalViewFile, onClearExternalView }: DashboardPr
                     <Column
                       key={folder.id}
                       folder={folder}
-                      onFileClick={setSelectedFile}
+                      onFileClick={handleFileClick}
                       onCreateFile={setCreatingInFolderId}
                     />
                   ))}
@@ -229,16 +234,16 @@ export function Dashboard({ externalViewFile, onClearExternalView }: DashboardPr
         )}
 
         {viewMode === 'list' && (
-          <ListView columns={columns} onFileClick={setSelectedFile} />
+          <ListView columns={columns} onFileClick={handleFileClick} />
         )}
 
         {viewMode === 'grid' && (
-          <GridView columns={columns} onFileClick={setSelectedFile} />
+          <GridView columns={columns} onFileClick={handleFileClick} />
         )}
       </div>
 
       {selectedFile && (
-        <MarkdownViewer file={selectedFile} onClose={handleCloseViewer} />
+        <MarkdownViewer file={selectedFile.file} folderId={selectedFile.folderId} onClose={handleCloseViewer} />
       )}
 
       {creatingInFolderId && (

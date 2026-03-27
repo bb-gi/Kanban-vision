@@ -7,6 +7,9 @@ import { WelcomePage } from './components/WelcomePage';
 import { TemplatePicker } from './components/TemplatePicker';
 import { AIPanel } from './components/AIPanel';
 import { GraphView } from './components/GraphView';
+import { KeyboardShortcuts } from './components/KeyboardShortcuts';
+import { StatsPanel } from './components/StatsPanel';
+import { ToastProvider, useToast } from './components/Toast';
 import { useApp } from './context/AppContext';
 import { pickAndReadDirectory } from './lib/fileReader';
 import { getNextColor } from './lib/folderUtils';
@@ -14,12 +17,15 @@ import type { FileItem } from './types';
 
 function AppContent() {
   const { state, dispatch, undo, redo } = useApp();
+  const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [viewingFile, setViewingFile] = useState<FileItem | null>(null);
+  const [viewingFile, setViewingFile] = useState<{ file: FileItem; folderId?: string } | null>(null);
   const [templateOpen, setTemplateOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
 
   const isDark = state.theme === 'dark';
@@ -34,31 +40,14 @@ function AppContent() {
     (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
 
-      if (mod && e.key === 'k') {
+      if (mod && e.key === 'k') { e.preventDefault(); setSearchOpen((v) => !v); return; }
+      if (mod && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(); return; }
+      if ((mod && e.shiftKey && e.key === 'z') || (mod && e.key === 'y')) { e.preventDefault(); redo(); return; }
+      if (mod && e.key === 'i') { e.preventDefault(); setAiOpen((v) => !v); return; }
+      if (mod && e.key === 'g') { e.preventDefault(); setGraphOpen((v) => !v); return; }
+      if (e.key === '?' && !mod && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement)) {
         e.preventDefault();
-        setSearchOpen((v) => !v);
-        return;
-      }
-      if (mod && !e.shiftKey && e.key === 'z') {
-        e.preventDefault();
-        undo();
-        return;
-      }
-      if ((mod && e.shiftKey && e.key === 'z') || (mod && e.key === 'y')) {
-        e.preventDefault();
-        redo();
-        return;
-      }
-      // Cmd+I - AI Panel
-      if (mod && e.key === 'i') {
-        e.preventDefault();
-        setAiOpen((v) => !v);
-        return;
-      }
-      // Cmd+G - Graph
-      if (mod && e.key === 'g') {
-        e.preventDefault();
-        setGraphOpen((v) => !v);
+        setShortcutsOpen((v) => !v);
         return;
       }
     },
@@ -79,7 +68,8 @@ function AppContent() {
     a.download = `kanban-vision-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [state]);
+    toast('Donnees exportees', 'success');
+  }, [state, toast]);
 
   const handleImport = useCallback(() => {
     const input = document.createElement('input');
@@ -93,13 +83,14 @@ function AppContent() {
         const data = JSON.parse(text);
         if (data.projects && data.boards) {
           dispatch({ type: 'RESTORE_STATE', payload: { ...data, theme: data.theme ?? state.theme } });
+          toast('Donnees importees avec succes', 'success');
         }
       } catch {
-        console.error('Invalid JSON file');
+        toast('Fichier JSON invalide', 'error');
       }
     };
     input.click();
-  }, [dispatch, state.theme]);
+  }, [dispatch, state.theme, toast]);
 
   const handleScanDirectory = useCallback(async () => {
     if (isScanning) return;
@@ -111,15 +102,16 @@ function AppContent() {
           type: 'IMPORT_PROJECT',
           payload: { name: result.rootName, folders: result.folders, color: getNextColor() },
         });
+        toast(`Projet "${result.rootName}" importe`, 'success');
       }
     } catch (err) {
+      toast('Erreur lors de l\'import', 'error');
       console.error('Failed to read directory:', err);
     } finally {
       setIsScanning(false);
     }
-  }, [isScanning, dispatch]);
+  }, [isScanning, dispatch, toast]);
 
-  // Collapse sidebar on small screens
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
     if (mq.matches) setSidebarOpen(false);
@@ -141,6 +133,7 @@ function AppContent() {
         onOpenTemplates={() => setTemplateOpen(true)}
         onOpenAI={() => setAiOpen(true)}
         onOpenGraph={() => setGraphOpen(true)}
+        onOpenStats={() => setStatsOpen(true)}
       />
 
       {isEmpty ? (
@@ -151,7 +144,8 @@ function AppContent() {
         />
       ) : (
         <Dashboard
-          externalViewFile={viewingFile}
+          externalViewFile={viewingFile?.file ?? null}
+          externalViewFolderId={viewingFile?.folderId}
           onClearExternalView={() => setViewingFile(null)}
         />
       )}
@@ -159,11 +153,13 @@ function AppContent() {
       <SearchBar
         isOpen={searchOpen}
         onClose={() => setSearchOpen(false)}
-        onFileSelect={(file) => setViewingFile(file)}
+        onFileSelect={(file) => setViewingFile({ file })}
       />
       <TemplatePicker isOpen={templateOpen} onClose={() => setTemplateOpen(false)} />
       <AIPanel isOpen={aiOpen} onClose={() => setAiOpen(false)} />
       <GraphView isOpen={graphOpen} onClose={() => setGraphOpen(false)} />
+      <KeyboardShortcuts isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <StatsPanel isOpen={statsOpen} onClose={() => setStatsOpen(false)} />
     </div>
   );
 }
@@ -171,7 +167,9 @@ function AppContent() {
 function App() {
   return (
     <AppProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </AppProvider>
   );
 }

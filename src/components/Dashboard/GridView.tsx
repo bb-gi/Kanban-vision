@@ -6,7 +6,7 @@ import { TagEditor } from '../TagEditor';
 
 interface GridViewProps {
   columns: Folder[];
-  onFileClick: (file: FileItem) => void;
+  onFileClick: (file: FileItem, folderId?: string) => void;
 }
 
 export function GridView({ columns, onFileClick }: GridViewProps) {
@@ -25,7 +25,7 @@ export function GridView({ columns, onFileClick }: GridViewProps) {
           return (
             <div
               key={file.id}
-              onClick={() => onFileClick(file)}
+              onClick={() => onFileClick(file, folder.id)}
               className={`rounded-lg border cursor-pointer transition-all hover:scale-[1.01] group ${
                 isDark
                   ? 'bg-gray-800 border-gray-700 hover:border-gray-600'
@@ -33,7 +33,7 @@ export function GridView({ columns, onFileClick }: GridViewProps) {
               }`}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter') onFileClick(file); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') onFileClick(file, folder.id); }}
             >
               {/* Card header */}
               <div className={`flex items-center gap-2 px-3 py-2 border-b ${

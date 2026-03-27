@@ -19,6 +19,7 @@ const UNDOABLE_ACTIONS = new Set([
   'TOGGLE_COLUMN', 'REORDER_COLUMNS', 'ADD_FILES_TO_FOLDER',
   'DELETE_FILE', 'IMPORT_PROJECT', 'CREATE_BOARD', 'ADD_FOLDER',
   'SET_FILE_TAGS', 'CREATE_BOARD_FROM_TEMPLATE',
+  'UPDATE_FILE', 'SET_FILE_DUE_DATE', 'DUPLICATE_FILE',
 ]);
 
 // Helper: apply a folder operation across all projects
@@ -346,6 +347,46 @@ function appReducer(state: AppState, action: AppAction): AppState {
           };
         }),
       };
+    }
+
+    case 'UPDATE_FILE':
+      return mapAllFolders(state, (folders) =>
+        updateFolderById(folders, action.payload.folderId, (f) => ({
+          ...f,
+          files: f.files.map((file) =>
+            file.id === action.payload.fileId
+              ? { ...file, title: action.payload.title, content: action.payload.content }
+              : file
+          ),
+        }))
+      );
+
+    case 'SET_FILE_DUE_DATE':
+      return mapAllFolders(state, (folders) =>
+        updateFolderById(folders, action.payload.folderId, (f) => ({
+          ...f,
+          files: f.files.map((file) =>
+            file.id === action.payload.fileId
+              ? { ...file, dueDate: action.payload.dueDate }
+              : file
+          ),
+        }))
+      );
+
+    case 'DUPLICATE_FILE': {
+      return mapAllFolders(state, (folders) =>
+        updateFolderById(folders, action.payload.folderId, (f) => {
+          const original = f.files.find((file) => file.id === action.payload.fileId);
+          if (!original) return f;
+          const copy = {
+            ...original,
+            id: uuidv4(),
+            title: original.title.replace(/\.md$/, ' (copie).md'),
+            dueDate: undefined,
+          };
+          return { ...f, files: [...f.files, copy] };
+        })
+      );
     }
 
     case 'SET_FILE_TAGS':

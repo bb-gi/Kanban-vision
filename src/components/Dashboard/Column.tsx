@@ -13,7 +13,7 @@ import { getTagColor } from '../TagEditor';
 
 interface ColumnProps {
   folder: Folder;
-  onFileClick: (file: FileItem) => void;
+  onFileClick: (file: FileItem, folderId?: string) => void;
   onCreateFile: (folderId: string) => void;
 }
 
@@ -209,7 +209,7 @@ export function Column({ folder, onFileClick, onCreateFile }: ColumnProps) {
               key={file.id}
               file={file}
               folderId={folder.id}
-              onClick={() => onFileClick(file)}
+              onClick={() => onFileClick(file, folder.id)}
               tagFilter={activeTagFilter}
             />
           ))}

@@ -5,7 +5,7 @@ import { TagEditor } from '../TagEditor';
 
 interface ListViewProps {
   columns: Folder[];
-  onFileClick: (file: FileItem) => void;
+  onFileClick: (file: FileItem, folderId?: string) => void;
 }
 
 function getPreview(content: string): string {
@@ -45,13 +45,13 @@ export function ListView({ columns, onFileClick }: ListViewProps) {
             return (
               <div
                 key={file.id}
-                onClick={() => onFileClick(file)}
+                onClick={() => onFileClick(file, folder.id)}
                 className={`flex items-start gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors group ${
                   isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
                 }`}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter') onFileClick(file); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') onFileClick(file, folder.id); }}
               >
                 {file.gitlabIssueIid ? (
                   <GitBranch size={16} className="shrink-0 mt-0.5 text-orange-400" />
