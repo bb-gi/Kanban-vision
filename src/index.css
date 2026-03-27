@@ -4,6 +4,8 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
@@ -63,4 +65,55 @@ body {
   outline: 2px solid #6366f1;
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* Mobile responsive: columns scroll horizontally with snap */
+@media (max-width: 768px) {
+  /* Make columns stackable on mobile */
+  .flex.gap-4.h-full.items-start {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .flex.gap-4.h-full.items-start > * {
+    scroll-snap-align: start;
+    min-width: 85vw;
+  }
+
+  /* Larger touch targets on mobile */
+  button {
+    min-height: 36px;
+    min-width: 36px;
+  }
+
+  /* Modal full-width on mobile */
+  .max-w-3xl, .max-w-5xl, .max-w-2xl, .max-w-4xl, .max-w-xl, .max-w-lg {
+    max-width: calc(100vw - 16px) !important;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(107, 114, 128, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 114, 128, 0.5);
+}
+
+/* PWA standalone mode adjustments */
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
 }

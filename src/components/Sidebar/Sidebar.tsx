@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   FolderSearch, RefreshCw, PanelLeftClose, PanelLeft, Loader2,
   GitBranch, Sun, Moon, Download, Upload, Search, Undo2, Redo2, Layout,
+  Sparkles, Share2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { BoardList } from './BoardList';
@@ -18,9 +19,11 @@ interface SidebarProps {
   onImport: () => void;
   onSearch: () => void;
   onOpenTemplates: () => void;
+  onOpenAI: () => void;
+  onOpenGraph: () => void;
 }
 
-export function Sidebar({ isOpen, onToggle, onExport, onImport, onSearch, onOpenTemplates }: SidebarProps) {
+export function Sidebar({ isOpen, onToggle, onExport, onImport, onSearch, onOpenTemplates, onOpenAI, onOpenGraph }: SidebarProps) {
   const { state, dispatch, undo, redo, canUndo, canRedo } = useApp();
 
   const isDark = state.theme === 'dark';
@@ -181,6 +184,26 @@ export function Sidebar({ isOpen, onToggle, onExport, onImport, onSearch, onOpen
           <Redo2 size={14} />
         </button>
         <div className="flex-1" />
+        <button
+          onClick={onOpenAI}
+          className={`p-1.5 rounded transition-colors ${
+            isDark ? 'text-purple-400/70 hover:text-purple-300 hover:bg-gray-700' : 'text-purple-500 hover:text-purple-700 hover:bg-gray-100'
+          }`}
+          aria-label="Assistant IA"
+          title="Assistant IA (Ctrl+I)"
+        >
+          <Sparkles size={14} />
+        </button>
+        <button
+          onClick={onOpenGraph}
+          className={`p-1.5 rounded transition-colors ${
+            isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100'
+          }`}
+          aria-label="Graphe de connexions"
+          title="Graphe (Ctrl+G)"
+        >
+          <Share2 size={14} />
+        </button>
         <button
           onClick={onExport}
           className={`p-1.5 rounded transition-colors ${

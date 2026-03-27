@@ -5,6 +5,8 @@ import { Dashboard } from './components/Dashboard/Dashboard';
 import { SearchBar } from './components/SearchBar';
 import { WelcomePage } from './components/WelcomePage';
 import { TemplatePicker } from './components/TemplatePicker';
+import { AIPanel } from './components/AIPanel';
+import { GraphView } from './components/GraphView';
 import { useApp } from './context/AppContext';
 import { pickAndReadDirectory } from './lib/fileReader';
 import { getNextColor } from './lib/folderUtils';
@@ -16,18 +18,18 @@ function AppContent() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [viewingFile, setViewingFile] = useState<FileItem | null>(null);
   const [templateOpen, setTemplateOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [graphOpen, setGraphOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
 
   const isDark = state.theme === 'dark';
   const isEmpty = state.projects.length === 0 && state.boards.length === 0;
 
-  // Apply theme class to document
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark);
     document.documentElement.classList.toggle('light', !isDark);
   }, [isDark]);
 
-  // Global keyboard shortcuts
   const handleGlobalKeyDown = useCallback(
     (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
@@ -47,6 +49,18 @@ function AppContent() {
         redo();
         return;
       }
+      // Cmd+I - AI Panel
+      if (mod && e.key === 'i') {
+        e.preventDefault();
+        setAiOpen((v) => !v);
+        return;
+      }
+      // Cmd+G - Graph
+      if (mod && e.key === 'g') {
+        e.preventDefault();
+        setGraphOpen((v) => !v);
+        return;
+      }
     },
     [undo, redo]
   );
@@ -56,7 +70,6 @@ function AppContent() {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [handleGlobalKeyDown]);
 
-  // Export data
   const handleExport = useCallback(() => {
     const data = JSON.stringify(state, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
@@ -68,7 +81,6 @@ function AppContent() {
     URL.revokeObjectURL(url);
   }, [state]);
 
-  // Import data
   const handleImport = useCallback(() => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -89,7 +101,6 @@ function AppContent() {
     input.click();
   }, [dispatch, state.theme]);
 
-  // Scan directory (shared between sidebar and welcome page)
   const handleScanDirectory = useCallback(async () => {
     if (isScanning) return;
     setIsScanning(true);
@@ -98,11 +109,7 @@ function AppContent() {
       if (result.folders.length > 0) {
         dispatch({
           type: 'IMPORT_PROJECT',
-          payload: {
-            name: result.rootName,
-            folders: result.folders,
-            color: getNextColor(),
-          },
+          payload: { name: result.rootName, folders: result.folders, color: getNextColor() },
         });
       }
     } catch (err) {
@@ -112,11 +119,18 @@ function AppContent() {
     }
   }, [isScanning, dispatch]);
 
+  // Collapse sidebar on small screens
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    if (mq.matches) setSidebarOpen(false);
+    const handler = (e: MediaQueryListEvent) => { if (e.matches) setSidebarOpen(false); };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   return (
     <div className={`flex h-screen overflow-hidden transition-colors duration-200 ${
-      isDark
-        ? 'bg-gray-950 text-gray-100'
-        : 'bg-gray-50 text-gray-900'
+      isDark ? 'bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-900'
     }`}>
       <Sidebar
         isOpen={sidebarOpen}
@@ -125,6 +139,8 @@ function AppContent() {
         onImport={handleImport}
         onSearch={() => setSearchOpen(true)}
         onOpenTemplates={() => setTemplateOpen(true)}
+        onOpenAI={() => setAiOpen(true)}
+        onOpenGraph={() => setGraphOpen(true)}
       />
 
       {isEmpty ? (
@@ -145,11 +161,9 @@ function AppContent() {
         onClose={() => setSearchOpen(false)}
         onFileSelect={(file) => setViewingFile(file)}
       />
-
-      <TemplatePicker
-        isOpen={templateOpen}
-        onClose={() => setTemplateOpen(false)}
-      />
+      <TemplatePicker isOpen={templateOpen} onClose={() => setTemplateOpen(false)} />
+      <AIPanel isOpen={aiOpen} onClose={() => setAiOpen(false)} />
+      <GraphView isOpen={graphOpen} onClose={() => setGraphOpen(false)} />
     </div>
   );
 }
