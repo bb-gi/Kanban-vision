@@ -12,7 +12,8 @@ interface ProjectListProps {
 }
 
 export function ProjectList({ projects, activeProjectId, activeBoard }: ProjectListProps) {
-  const { dispatch } = useApp();
+  const { state, dispatch } = useApp();
+  const isDark = state.theme === 'dark';
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -38,19 +39,19 @@ export function ProjectList({ projects, activeProjectId, activeBoard }: ProjectL
   }
 
   return (
-    <div>
+    <div role="list" aria-label="Projets">
       {projects.map((project) => {
         const isExpanded = expandedIds.has(project.id);
         const isActive = project.id === activeProjectId;
 
         return (
-          <div key={project.id}>
+          <div key={project.id} role="listitem">
             {/* Project header */}
             <div
               className={`group flex items-center gap-1.5 px-2 py-1.5 cursor-pointer transition-colors text-sm ${
                 isActive
-                  ? 'bg-gray-700/70 text-white'
-                  : 'text-gray-300 hover:bg-gray-700/40'
+                  ? isDark ? 'bg-gray-700/70 text-white' : 'bg-indigo-50 text-indigo-900'
+                  : isDark ? 'text-gray-300 hover:bg-gray-700/40' : 'text-gray-700 hover:bg-gray-100'
               }`}
               onClick={() => {
                 dispatch({ type: 'SET_ACTIVE_PROJECT', payload: { projectId: project.id } });
@@ -62,7 +63,9 @@ export function ProjectList({ projects, activeProjectId, activeBoard }: ProjectL
                   e.stopPropagation();
                   toggleExpanded(project.id);
                 }}
-                className="shrink-0 w-4 h-4 flex items-center justify-center text-gray-400"
+                className={`shrink-0 w-4 h-4 flex items-center justify-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+                aria-expanded={isExpanded}
+                aria-label={isExpanded ? 'Réduire' : 'Développer'}
               >
                 {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               </button>
@@ -83,13 +86,15 @@ export function ProjectList({ projects, activeProjectId, activeBoard }: ProjectL
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     onBlur={() => handleRename(project.id)}
-                    className="bg-gray-800 text-white text-sm px-1 py-0 rounded border border-gray-600 flex-1 min-w-0"
+                    className={`text-sm px-1 py-0 rounded border flex-1 min-w-0 ${
+                      isDark ? 'bg-gray-800 text-white border-gray-600' : 'bg-gray-50 text-gray-900 border-gray-300'
+                    }`}
                     onKeyDown={(e) => { if (e.key === 'Escape') setEditingId(null); }}
                   />
-                  <button type="submit" className="text-green-400 hover:text-green-300">
+                  <button type="submit" className="text-green-400 hover:text-green-300" aria-label="Confirmer">
                     <Check size={12} />
                   </button>
-                  <button type="button" onClick={() => setEditingId(null)} className="text-red-400 hover:text-red-300">
+                  <button type="button" onClick={() => setEditingId(null)} className="text-red-400 hover:text-red-300" aria-label="Annuler">
                     <X size={12} />
                   </button>
                 </form>
@@ -114,8 +119,8 @@ export function ProjectList({ projects, activeProjectId, activeBoard }: ProjectL
                       setEditingId(project.id);
                       setEditName(project.name);
                     }}
-                    className="p-1 text-gray-400 hover:text-white"
-                    title="Renommer"
+                    className={`p-1 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-700'}`}
+                    aria-label={`Renommer ${project.name}`}
                   >
                     <Pencil size={12} />
                   </button>
@@ -124,8 +129,8 @@ export function ProjectList({ projects, activeProjectId, activeBoard }: ProjectL
                       e.stopPropagation();
                       dispatch({ type: 'DELETE_PROJECT', payload: { projectId: project.id } });
                     }}
-                    className="p-1 text-gray-400 hover:text-red-400"
-                    title="Supprimer"
+                    className={`p-1 ${isDark ? 'text-gray-400 hover:text-red-400' : 'text-gray-400 hover:text-red-500'}`}
+                    aria-label={`Supprimer ${project.name}`}
                   >
                     <Trash2 size={12} />
                   </button>
@@ -135,7 +140,7 @@ export function ProjectList({ projects, activeProjectId, activeBoard }: ProjectL
 
             {/* Folder tree (expanded) */}
             {isExpanded && (
-              <div className="ml-2 border-l border-gray-700/50">
+              <div className={`ml-2 border-l ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
                 <FolderTree folders={project.folders} activeBoard={activeBoard} />
               </div>
             )}

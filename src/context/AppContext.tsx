@@ -6,15 +6,19 @@ import { useAppState } from '../hooks/useAppState';
 interface AppContextValue {
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const { state, dispatch } = useAppState();
+  const { state, dispatch, undo, redo, canUndo, canRedo } = useAppState();
 
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={{ state, dispatch, undo, redo, canUndo, canRedo }}>
       {children}
     </AppContext.Provider>
   );
