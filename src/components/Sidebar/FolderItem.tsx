@@ -16,11 +16,13 @@ interface FolderItemProps {
   folder: Folder;
   depth: number;
   activeBoard: Board | null;
+  isOpen: boolean;
+  onToggle: (id: string) => void;
+  expandedIds: Set<string>;
 }
 
-export function FolderItem({ folder, depth, activeBoard }: FolderItemProps) {
+export function FolderItem({ folder, depth, activeBoard, isOpen, onToggle, expandedIds }: FolderItemProps) {
   const { dispatch } = useApp();
-  const [isOpen, setIsOpen] = useState(depth < 2);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(folder.displayName);
 
@@ -53,7 +55,7 @@ export function FolderItem({ folder, depth, activeBoard }: FolderItemProps) {
       >
         {/* Expand/Collapse */}
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => onToggle(folder.id)}
           className="shrink-0 w-4 h-4 flex items-center justify-center text-gray-400"
         >
           {hasChildren ? (
@@ -149,6 +151,9 @@ export function FolderItem({ folder, depth, activeBoard }: FolderItemProps) {
               folder={sub}
               depth={depth + 1}
               activeBoard={activeBoard}
+              isOpen={expandedIds.has(sub.id)}
+              onToggle={onToggle}
+              expandedIds={expandedIds}
             />
           ))}
         </div>

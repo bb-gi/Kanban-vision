@@ -269,6 +269,75 @@ function appReducer(state: AppState, action: AppAction): AppState {
         }))
       );
 
+    case 'DELETE_FILE':
+      return mapAllFolders(state, (folders) =>
+        updateFolderById(folders, action.payload.folderId, (f) => ({
+          ...f,
+          files: f.files.filter((file) => file.id !== action.payload.fileId),
+        }))
+      );
+
+    // === GitLab actions ===
+    case 'SET_GITLAB_CONFIG':
+      return {
+        ...state,
+        projects: state.projects.map((p) =>
+          p.id === action.payload.projectId
+            ? { ...p, gitlabConfig: action.payload.config }
+            : p
+        ),
+      };
+
+    case 'REMOVE_GITLAB_CONFIG':
+      return {
+        ...state,
+        projects: state.projects.map((p) =>
+          p.id === action.payload.projectId
+            ? { ...p, gitlabConfig: undefined }
+            : p
+        ),
+      };
+
+    case 'SET_FOLDER_GITLAB_LABEL':
+      return mapAllFolders(state, (folders) =>
+        updateFolderById(folders, action.payload.folderId, (f) => ({
+          ...f,
+          gitlabLabel: action.payload.label || undefined,
+        }))
+      );
+
+    case 'SYNC_GITLAB_ISSUES': {
+      const { projectId, folderId, files } = action.payload;
+      return {
+        ...state,
+        projects: state.projects.map((p) => {
+          if (p.id !== projectId) return p;
+          return {
+            ...p,
+            folders: updateFolderById(p.folders, folderId, (f) => {
+              // Merge: keep existing non-gitlab files, update existing gitlab files, add new ones
+              const existingGitlabMap = new Map(
+                f.files
+                  .filter((file) => file.gitlabIssueIid !== undefined)
+                  .map((file) => [file.gitlabIssueIid!, file])
+              );
+              const nonGitlabFiles = f.files.filter((file) => file.gitlabIssueIid === undefined);
+              const mergedGitlabFiles = files.map((newFile) => {
+                const existing = newFile.gitlabIssueIid !== undefined
+                  ? existingGitlabMap.get(newFile.gitlabIssueIid)
+                  : undefined;
+                if (existing) {
+                  return { ...existing, title: newFile.title, content: newFile.content };
+                }
+                return newFile;
+              });
+              return { ...f, files: [...nonGitlabFiles, ...mergedGitlabFiles] };
+            }),
+          };
+        }),
+      };
+    }
+
     default:
       return state;
   }
